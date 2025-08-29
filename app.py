@@ -17,6 +17,72 @@ token = st.secrets["github_classic_token_test001"]
 userName="HKIBIMTechnical"
 change_name_code=st.secrets["change_name_code"]
 #region function
+def get_public_repositories(username):
+    """
+    Get public repositories for a specific username without requiring authentication.
+    
+    Args:
+        username (str): GitHub username to get repositories for
+    
+    Returns:
+        list: List of dictionaries containing repository information
+    """
+    url = f'https://api.github.com/users/{username}/repos'
+    
+    repositories = []
+    page = 1
+    per_page = 100  # Maximum allowed by GitHub API
+    
+    try:
+        while True:
+            params = {
+                'page': page,
+                'per_page': per_page,
+                'sort': 'updated',
+                'direction': 'desc'
+            }
+            
+            # No authentication headers needed for public repos
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            
+            page_repos = response.json()
+            
+            # If no more repositories, break
+            if not page_repos:
+                break
+            
+            # Process repositories on this page
+            for repo in page_repos:
+                repo_info = {
+                    'name': repo['name'],
+                    'url': repo['url'],
+                    'html_url': repo['html_url'],
+                    'clone_url': repo['clone_url'],
+                    'ssh_url': repo['ssh_url'],
+                    'description': repo.get('description', ''),
+                    'language': repo.get('language', ''),
+                    'private': repo['private'],
+                    'fork': repo['fork'],
+                    'stars': repo['stargazers_count'],
+                    'forks': repo['forks_count'],
+                    'updated_at': repo['updated_at']
+                }
+                repositories.append(repo_info)
+            
+            # Check if we've reached the last page
+            if len(page_repos) < per_page:
+                break
+            
+            page += 1
+            
+        return repositories
+        
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"Failed to fetch repositories: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Error processing repositories: {str(e)}")
+
 def get_all_repositories(token, username=None):
     """
     Get all repositories for the authenticated user or a specific username.
@@ -418,8 +484,111 @@ def check_file_or_folder_exists(token, username, repository_Name, file_path="REA
     except Exception as e:
         raise Exception(f"Error checking file existence: {str(e)}")
 
+def process_github_images(content):
+    """
+    Process GitHub markdown content to convert blob URLs to raw URLs for image display.
+    
+    Args:
+        content (str): Markdown content from README
+        
+    Returns:
+        str: Processed content with converted image URLs and line breaks after images
+    """
+    import re
+    
+    # Pattern to match GitHub blob URLs in markdown image syntax
+    # Matches: ![alt](https://github.com/user/repo/blob/branch/path/to/image.png)
+    pattern = r'!\[([^\]]*)\]\(https://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/([^)]+)\)'
+    
+    def replace_url(match):
+        alt_text = match.group(1)
+        username = match.group(2)
+        repo_name = match.group(3)
+        branch = match.group(4)
+        file_path = match.group(5)
+        
+        # Convert to raw GitHub URL
+        raw_url = f"https://raw.githubusercontent.com/{username}/{repo_name}/{branch}/{file_path}"
+        
+        return f'![{alt_text}]({raw_url})\n\n'
+    
+    # Replace all GitHub blob URLs with raw URLs
+    processed_content = re.sub(pattern, replace_url, content)
+    
+    
+    # Also handle other common GitHub URL patterns
+    # Handle URLs that might be missing the branch (default to main)
+    pattern2 = r'!\[([^\]]*)\]\(https://github\.com/([^/]+)/([^/]+)/blob/([^)]+)\)'
+    def replace_url2(match):
+        alt_text = match.group(1)
+        username = match.group(2)
+        repo_name = match.group(3)
+        file_path = match.group(4)
+        
+        # Default to main branch
+        raw_url = f"https://raw.githubusercontent.com/{username}/{repo_name}/main/{file_path}"
+        
+        return f'![{alt_text}]({raw_url})\n\n'
+    
+    processed_content = re.sub(pattern2, replace_url2, processed_content)
+    
+    # Also add line breaks after any remaining image markdown that wasn't caught by the above patterns
+    # This handles images that might already be in raw format or other formats
+    image_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+    def add_line_breaks(match):
+        alt_text = match.group(1)
+        img_url = match.group(2)
+        return f'![{alt_text}]({img_url})\n\n'
+    
+    processed_content = re.sub(image_pattern, add_line_breaks, processed_content)
+    
+    return processed_content
 
-
+def display_readme_with_images(content, repo_name):
+    """
+    Enhanced README display with better image handling and fallback options.
+    
+    Args:
+        content (str): README content
+        repo_name (str): Repository name for context
+    """
+    import re
+    
+    # Process GitHub images
+    processed_content = process_github_images(content)
+    
+    # Check if there are any images in the content
+    image_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+    images = re.findall(image_pattern, processed_content)
+    
+    if images:
+        # Display images separately for better control
+        for i, (alt_text, img_url) in enumerate(images):
+            st.markdown(f"**Image {i+1}:** {alt_text if alt_text else 'No description'}")
+            
+            try:
+                # Try to display the image
+                if img_url.startswith('http'):
+                    # Add a small delay to prevent overwhelming the server
+                    import time
+                    time.sleep(0.1)
+                    
+                    st.image(img_url, caption=alt_text if alt_text else f"Image {i+1}")
+                else:
+                    st.warning(f"⚠️ Invalid image URL: {img_url}")
+            except Exception as e:
+                st.error(f"❌ Failed to load image: {str(e)}")
+                st.info(f"Image URL: {img_url}")
+                
+                # Provide alternative display options
+                st.markdown(f"**Alternative options:**")
+                st.markdown(f"- Try copying this URL: `{img_url}`")
+                st.markdown(f"- Check if the image exists at: {img_url}")
+            
+            st.markdown("---")
+    
+    # Display the processed markdown content
+    st.markdown(processed_content)
 
 #endregion
 
@@ -429,98 +598,21 @@ def check_file_or_folder_exists(token, username, repository_Name, file_path="REA
 
 st.set_page_config(layout="wide")
 
-# Add custom CSS for responsive table with dynamic border colors
-st.markdown("""
-<style>
-    .repo-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 20px 0;
-        font-family: Arial, sans-serif;
-    }
-    
-    .repo-table th {
-        background-color: var(--background-color, #f0f2f6);
-        color: var(--text-color, #262730);
-        padding: 12px;
-        text-align: left;
-        font-weight: bold;
-        border: 2px solid var(--border-color, #262730);
-    }
-    
-    .repo-table td {
-        padding: 12px;
-        border: 1px solid var(--border-color, #262730);
-        vertical-align: top;
-    }
-    
-    .repo-table tr:nth-child(even) {
-        background-color: var(--alternate-row-color, rgba(151, 166, 195, 0.15));
-    }
-    
-    .repo-table tr:hover {
-        background-color: var(--hover-color, rgba(151, 166, 195, 0.25));
-    }
-    
-    .rename-button {
-        background-color: #ff6b6b;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background-color 0.3s;
-    }
-    
-    .rename-button:hover {
-        background-color: #ff5252;
-    }
-    
-    .rename-button:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-    }
-    
-    .url-cell {
-        max-width: 300px;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-    }
-    
-    .name-cell {
-        font-weight: bold;
-        color: var(--accent-color, #ff6b6b);
-    }
-    
-    /* Dark mode detection and dynamic colors */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --border-color: #ffffff;
-            --background-color: #1e1e1e;
-            --text-color: #ffffff;
-            --alternate-row-color: rgba(255, 255, 255, 0.05);
-            --hover-color: rgba(255, 255, 255, 0.1);
-            --accent-color: #ff6b6b;
-        }
-    }
-    
-    /* Light mode (default) */
-    :root {
-        --border-color: #262730;
-        --background-color: #f0f2f6;
-        --text-color: #262730;
-        --alternate-row-color: rgba(151, 166, 195, 0.15);
-        --hover-color: rgba(151, 166, 195, 0.25);
-        --accent-color: #ff6b6b;
-    }
-</style>
-""", unsafe_allow_html=True)
+
+
 
 st.title("HKIBIM Github Repositories")
 
-# Get repositories
-repos = get_all_repositories(token, userName)
+# Get repositories - use session state to track if we need to refresh
+if 'repos_cache' not in st.session_state:
+    st.session_state.repos_cache = get_public_repositories(userName)
+
+# Check if we need to refresh the repository list
+if st.session_state.get('refresh_repos', False):
+    st.session_state.repos_cache = get_public_repositories(userName)
+    st.session_state.refresh_repos = False
+
+repos = st.session_state.repos_cache
 
 # Create a container for the table
 container = st.container()
@@ -547,13 +639,16 @@ with st.container():
     st.markdown("**📊 Repository List**")
     # Create dataframe without index column
     df_display = pd.DataFrame(table_data)
-    
+    row_height = 35  
+    num_rows = len(df_display)
+    calculated_height = num_rows * row_height + 50
     # Use st.data_editor for interactive functionality
     edited_df = st.data_editor(
         df_display,
         use_container_width=True,
         hide_index=True,
-        key="interactive_repo_dataframe"
+        height=calculated_height,
+        key=f"interactive_repo_dataframe_{len(repos)}"
     )
 
 
@@ -572,7 +667,7 @@ change_name_input = st.text_input(
 selected_repo = st.selectbox(
     "Select repository to rename:",
     options=[repo['name'] for repo in repos],
-    key="repo_selector"
+    key=f"repo_selector_{len(repos)}"
 )
 
 if selected_repo:
@@ -592,6 +687,8 @@ if selected_repo:
                         result = rename_repository(token, userName, selected_repo, new_name)
                         if result['status'] == 'success':
                             st.success(f"Repository renamed successfully from '{selected_repo}' to '{new_name}'")
+                            # Mark that we need to refresh the repository list
+                            st.session_state.refresh_repos = True
                             st.rerun()
                         else:
                             st.error(f"Failed to rename repository: {result.get('message', 'Unknown error')}")
@@ -616,11 +713,18 @@ st.info("The repositories are now displayed in a proper table format instead of 
 # Repository Selection and README Display
 st.divider()
 st.markdown("### 🔍 Repository Selection")
+
+
+
 selected_repo_name = st.selectbox(
     "Select repository to view README:",
     options=[repo['name'] for repo in repos],
-    key="repo_selector_for_readme"
+    key=f"repo_selector_for_readme_{len(repos)}"
 )
+
+
+
+
 
 # Show README content for selected repository
 if selected_repo_name:
@@ -635,8 +739,10 @@ if selected_repo_name:
             st.markdown("---")
             
             # Container for README content with fixed height
-            with st.container( height=600):
-                st.markdown(readme_content)
+            with st.container( height=800):
+                processed_content = process_github_images(readme_content)
+                st.markdown(processed_content)
+                
                 st.markdown("---")
         else:
             st.warning("README.md file exists but is empty")
