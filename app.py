@@ -605,11 +605,11 @@ st.title("HKIBIM Github Repositories")
 
 # Get repositories - use session state to track if we need to refresh
 if 'repos_cache' not in st.session_state:
-    st.session_state.repos_cache = get_public_repositories(userName)
+    st.session_state.repos_cache = get_all_repositories(token,userName)
 
 # Check if we need to refresh the repository list
 if st.session_state.get('refresh_repos', False):
-    st.session_state.repos_cache = get_public_repositories(userName)
+    st.session_state.repos_cache = get_all_repositories(token,userName)
     st.session_state.refresh_repos = False
 
 repos = st.session_state.repos_cache
