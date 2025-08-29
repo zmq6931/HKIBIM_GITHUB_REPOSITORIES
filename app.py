@@ -628,7 +628,7 @@ for i, repo in enumerate(repos):
     })
 
 
-
+table_data.reverse()
 
 
 # Interactive dataframe with click functionality
@@ -663,6 +663,8 @@ change_name_input = st.text_input(
     help="Enter the change name code to enable repository renaming",
     key="change_name_code_input"
 )
+
+repos.reverse()
 
 selected_repo = st.selectbox(
     "Select repository to rename:",
