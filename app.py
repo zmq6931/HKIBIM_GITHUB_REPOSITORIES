@@ -627,9 +627,7 @@ for i, repo in enumerate(repos):
         "Index": i
     })
 
-
 table_data.reverse()
-
 
 # Interactive dataframe with click functionality
 st.markdown("### Repository Table")
@@ -664,11 +662,11 @@ change_name_input = st.text_input(
     key="change_name_code_input"
 )
 
-repos.reverse()
+
 
 selected_repo = st.selectbox(
     "Select repository to rename:",
-    options=[repo['name'] for repo in repos],
+    options=[repo['name'] for repo in repos][::-1],
     key=f"repo_selector_{len(repos)}"
 )
 
@@ -720,7 +718,7 @@ st.markdown("### 🔍 Repository Selection")
 
 selected_repo_name = st.selectbox(
     "Select repository to view README:",
-    options=[repo['name'] for repo in repos],
+    options=[repo['name'] for repo in repos][::-1],
     key=f"repo_selector_for_readme_{len(repos)}"
 )
 
