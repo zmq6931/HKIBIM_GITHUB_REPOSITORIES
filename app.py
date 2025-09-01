@@ -651,64 +651,68 @@ with st.container():
 
 
 
-# Create rename functionality below the table
-st.markdown("### Rename Repository")
+# # Create rename functionality below the table
+# st.markdown("### Rename Repository")
 
-# Add change name code input
-change_name_input = st.text_input(
-    "Change Name Code:",
-    type="password",
-    help="Enter the change name code to enable repository renaming",
-    key="change_name_code_input"
-)
+# # Add change name code input
+# change_name_input = st.text_input(
+#     "Change Name Code:",
+#     type="password",
+#     help="Enter the change name code to enable repository renaming",
+#     key="change_name_code_input"
+# )
 
 
 
-selected_repo = st.selectbox(
-    "Select repository to rename:",
-    options=[repo['name'] for repo in repos][::-1],
-    key=f"repo_selector_{len(repos)}"
-)
+# selected_repo = st.selectbox(
+#     "Select repository to rename:",
+#     options=[repo['name'] for repo in repos][::-1],
+#     key=f"repo_selector_{len(repos)}"
+# )
 
-if selected_repo:
-    new_name = st.text_input(
-        f"Enter new name for '{selected_repo}':",
-        value=selected_repo,
-        key="new_name_input"
-    )
+# if selected_repo:
+#     new_name = st.text_input(
+#         f"Enter new name for '{selected_repo}':",
+#         value=selected_repo,
+#         key="new_name_input"
+#     )
     
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        # Check if change name code is correct
-        if change_name_input == change_name_code:
-            if st.button("Rename Repository", type="primary"):
-                if new_name and new_name != selected_repo:
-                    try:
-                        result = rename_repository(token, userName, selected_repo, new_name)
-                        if result['status'] == 'success':
-                            st.success(f"Repository renamed successfully from '{selected_repo}' to '{new_name}'")
-                            # Mark that we need to refresh the repository list
-                            st.session_state.refresh_repos = True
-                            st.rerun()
-                        else:
-                            st.error(f"Failed to rename repository: {result.get('message', 'Unknown error')}")
-                    except Exception as e:
-                        st.error(f"Error renaming repository: {str(e)}")
-                else:
-                    st.warning("Please enter a different name")
-        else:
-            # Show disabled button when code is incorrect
-            st.button("Rename Repository", type="primary", disabled=True)
-            if change_name_input:
-                st.error("❌ Incorrect change name code. Please enter the correct code to enable renaming.")
-            else:
-                st.info("ℹ️ Please enter the change name code to enable repository renaming.")
+#     col1, col2 = st.columns([1, 4])
+#     with col1:
+#         # Check if change name code is correct
+#         if change_name_input == change_name_code:
+#             if st.button("Rename Repository", type="primary"):
+#                 if new_name and new_name != selected_repo:
+#                     try:
+#                         result = rename_repository(token, userName, selected_repo, new_name)
+#                         if result['status'] == 'success':
+#                             st.success(f"Repository renamed successfully from '{selected_repo}' to '{new_name}'")
+#                             # Mark that we need to refresh the repository list
+#                             st.session_state.refresh_repos = True
+#                             st.rerun()
+#                         else:
+#                             st.error(f"Failed to rename repository: {result.get('message', 'Unknown error')}")
+#                     except Exception as e:
+#                         st.error(f"Error renaming repository: {str(e)}")
+#                 else:
+#                     st.warning("Please enter a different name")
+#         else:
+#             # Show disabled button when code is incorrect
+#             st.button("Rename Repository", type="primary", disabled=True)
+#             if change_name_input:
+#                 st.error("❌ Incorrect change name code. Please enter the correct code to enable renaming.")
+#             else:
+#                 st.info("ℹ️ Please enter the change name code to enable repository renaming.")
     
-    with col2:
-        st.info(f"Current repository: {selected_repo}")
+#     with col2:
+#         st.info(f"Current repository: {selected_repo}")
 
-# Add a note about the table
-st.info("The repositories are now displayed in a proper table format instead of columns.")
+# # Add a note about the table
+# st.info("The repositories are now displayed in a proper table format instead of columns.")
+
+
+
+
 
 # Repository Selection and README Display
 st.divider()
